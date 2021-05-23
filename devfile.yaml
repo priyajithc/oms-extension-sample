@@ -114,3 +114,5 @@ commands:
         type: exec
         command: /opt/ibm/wlp/bin/server stop defaultServer
         component: oms-appserver
+attributes:
+  persistVolumes: 'false'
