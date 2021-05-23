@@ -1,0 +1,116 @@
+---
+apiVersion: 1.0.0
+metadata:
+  generateName: oms-dev-
+projects:
+  -
+    name: oms-extension
+    source:
+      type: git
+      location: "https://github.com/priyajithc/oms-extension-sample.git"
+components:
+  - id: redhat/java/latest
+    preferences:
+      java.server.launchMode: Standard
+    type: chePlugin
+  - mountSources: true
+    memoryLimit: 512Mi
+    type: dockerimage
+    volumes:
+      - name: gradle
+        containerPath: /home/gradle/.gradle
+    image: 'quay.io/eclipse/che-java11-gradle:7.21.1'
+    alias: oms-extenstion
+    env:
+      - value: /home/gradle/.gradle
+        name: GRADLE_USER_HOME
+      - value: '-XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xms20m -Djava.security.egd=file:/dev/./urandom'
+        name: JAVA_OPTS
+      - value: '-XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xms20m -Djava.security.egd=file:/dev/./urandom'
+        name: JAVA_TOOL_OPTIONS
+      - value: /home/gradle
+        name: HOME
+  -
+    type: dockerimage
+    alias: oms-runtime
+    image: au.icr.io/ibm-oms/om-runtime-che:v1
+    memoryLimit: 2048Mi
+    mountSources: true
+    volumes:
+    - name: ear
+      containerPath: /shared
+  -
+    type: dockerimage
+    alias: oms-appserver
+    image: au.icr.io/ibm-oms/om-liberty-che:v1
+    memoryLimit: 3072Mi
+    endpoints:
+      - name: oms-appserver
+        port: 9080
+    mountSources: true
+    volumes:
+    - name: ear
+      containerPath: /shared
+commands:
+  - name: Build Java Extensions
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}/oms-extension-sample'
+        type: exec
+        command: gradle build
+        component: oms-extenstion
+  - name: Apply Extension
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}'
+        type: exec
+        command: cd runtime/bin && ./setupfiles.sh && ./deployer.sh -t resourcejargen
+        component: oms-runtime        
+  - name: Build EAR
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}'
+        type: exec
+        command: >-
+          read -p 'WAR Files [smcfs,sbc,sma]: ' warFiles;
+          warFiles=${warFiles:-'smcfs,sbc,sma'};
+          read -p 'Dev Mode [false]: ' devMode;
+          devMode=${devMode:-'false'};
+          read -p 'Additional Build Arguments: ' addnArgs;
+          cd runtime/bin && ./setupfiles.sh && ./deployer.sh -t resourcejargen && ./buildear.sh -Ddevmode=$devMode -Dappserver=websphere -Dapitester=true -Dwebsphere-profile=liberty -Dwarfiles=$warFiles -Dearfile=smcfs.ear -Dnowebservice=true -Dnoejb=true $addnArgs && rm -rf /shared/* && cp /projects/runtime/external_deployments/*.ear /shared
+        component: oms-runtime
+  - name: Load data
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}'
+        type: exec
+        command: echo "Loading data..."
+        component: oms-runtime        
+  - name: Start Agent/Integration Server
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}'
+        type: exec
+        command: >-
+          read -p 'Server Name: ' name;
+          read -p 'JVM Options: ' jvmOptions;
+          echo "Starting server $name $jvmOptions"
+        component: oms-runtime
+  - name: Stop Agent/Integration Server
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}'
+        type: exec
+        command: >-
+          read -p 'Server Name: ' name;
+          echo "Stopping server $name"
+        component: oms-runtime        
+  - name: Start Application Server
+    previewUrl:
+      port: 9080
+      path: /smcfs
+    actions:
+      - workdir: '/shared'
+        type: exec
+        command: rm -rf /config/dropins/*.ear && cp *.ear /config/dropins/ && /opt/ibm/wlp/bin/server run defaultServer
+        component: oms-appserver
+  - name: Stop Application Server
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}'
+        type: exec
+        command: /opt/ibm/wlp/bin/server stop defaultServer
+        component: oms-appserver
