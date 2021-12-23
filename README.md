@@ -1,9 +1,9 @@
-# console-java-simple
+# oms-extension-sample
 
-A simple java "Hello World!" application, buildable with both maven and gradle. Useful for testing Eclipse Che Java workspaces.
+A sample oms extension project
 
 
-# Building manually
+# Building java extensions
 
 |        | Task  | Command                    |
 | ------ | ----- | -------------------------- |
