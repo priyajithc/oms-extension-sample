@@ -38,7 +38,7 @@ components:
         port: 4500
     memoryLimit: 4096Mi
     type: dockerimage
-    image: 'au.icr.io/ibm-oms/om-runtime-che:v2.10'
+    image: '192.168.1.2:5000/ibm-oms/om-runtime-che:v2.10'
     alias: oms-runtime
   - mountSources: true
     endpoints:
@@ -68,7 +68,7 @@ components:
         port: 9080
     memoryLimit: 3072Mi
     type: dockerimage
-    image: 'au.icr.io/ibm-oms/om-liberty-che:v1'
+    image: '192.168.1.2:5000/ibm-oms/om-liberty-che:v1'
     alias: oms-appserver
 commands:
   - name: Build Java Extensions
