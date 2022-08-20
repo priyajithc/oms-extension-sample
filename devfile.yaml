@@ -38,7 +38,7 @@ components:
         port: 4500
     memoryLimit: 4096Mi
     type: dockerimage
-    image: 'localhost:5000/oms-base-che:v1'
+    image: 'myregistry.domain.com:443/oms-base-che:v1'
     alias: oms-runtime
   - mountSources: true
     endpoints:
@@ -68,7 +68,7 @@ components:
         port: 9080
     memoryLimit: 3072Mi
     type: dockerimage
-    image: 'localhost:5000/oms-liberty-che:v1'
+    image: 'myregistry.domain.com:443/oms-liberty-che:v1'
     alias: oms-appserver
 commands:
   - name: Build Java Extensions
